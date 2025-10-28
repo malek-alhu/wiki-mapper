@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrected Wikipedia Graph Explorer</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        h1 { color: #1c1e21; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        form { margin-bottom: 20px; }
+        #graph-container { width: 100%; height: 75vh; border: 1px solid #ddd; border-radius: 8px; background-color: #ffffff; }
+        input, button { padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; margin: 5px; }
+        button { background-color: #007bff; color: white; cursor: pointer; border: none; transition: background-color 0.2s, opacity 0.2s; }
+        button:hover:not(:disabled) { background-color: #0056b3; }
+        button:disabled { background-color: #9dbde0; cursor: not-allowed; }
+        #proceedBtn { background-color: #28a745; }
+        #proceedBtn:hover:not(:disabled) { background-color: #1e7e34; }
+        #status { margin-top: 15px; font-size: 1.1em; color: #555; min-height: 25px; transition: color 0.3s; }
+        .status-error { color: #d93025; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Corrected Wikipedia Graph Explorer</h1>
+        <form id="wikiForm">
+            <input type="text" id="wikiLink" placeholder="Full Wikipedia Link" required size="50" value="https://en.wikipedia.org/wiki/Data_science">
+            <input type="number" id="depth" placeholder="Depth" required min="1" max="3" value="2">
+            <button type="submit" id="startBtn">Start Exploration</button>
+        </form>
+
+        <div id="graph-container"></div>
+        <button id="proceedBtn" style="display:none;">Explore Next Level</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('wikiForm');
+        const startBtn = document.getElementById('startBtn');
+        const proceedBtn = document.getElementById('proceedBtn');
+        const statusDiv = document.getElementById('status');
+        const wikiLinkInput = document.getElementById('wikiLink');
+        const depthInput = document.getElementById('depth');
+
+        let network;
+        const nodes = new vis.DataSet();
+        const edges = new vis.DataSet();
+        
+        let maxDepth = 0;
+        let currentDepth = 0;
+        let nodesForNextLevel = [];
+        const processedTitles = new Set();
+        let appState = 'idle'; // 'idle', 'processing', 'finished'
+
+        const DEPTH_COLORS = ['#ff6347', '#1e90ff', '#32cd32', '#ffaf40', '#9d4edd'];
+
+        const container = document.getElementById('graph-container');
+        const data = { nodes, edges };
+        const options = {
+            nodes: { shape: 'dot', size: 16, font: { size: 12, color: '#333' } },
+            edges: { width: 0.5, color: { inherit: 'from' }, smooth: { type: 'continuous' } },
+            physics: {
+                enabled: true,
+                barnesHut: {
+                    gravitationalConstant: -8000,
+                    springConstant: 0.04,
+                    springLength: 150,
+                    damping: 0.09
+                },
+                solver: 'barnesHut',
+                stabilization: { iterations: 200 }
+            },
+            interaction: { hover: true, tooltipDelay: 200 }
+        };
+	        network = new vis.Network(container, data, options);
+
+	        form.addEventListener('submit', (e) => {
+	            e.preventDefault();
+	            if (appState === 'processing') return;
+	            
+	            resetGraph();
+	            
+	            const initialUrl = wikiLinkInput.value;
+	            maxDepth = parseInt(depthInput.value, 10);
+	            const pageTitle = getTitleFromUrl(initialUrl);
+
+	            if (!pageTitle) {
+	                updateStatus("Invalid Wikipedia URL. Please check and try again.", true);
+	                return;
+	            }
+	            
+	            addNode(pageTitle, 0);
+	            processedTitles.add(pageTitle);
+	            nodesForNextLevel = [pageTitle];
+	            currentDepth = 0; // Initialize currentDepth
+	            
+	            processNextLevel();
+	        });
+
+	        proceedBtn.addEventListener('click', () => {
+	            if (appState === 'processing' || currentDepth >= maxDepth) return;
+	            processNextLevel();
+	        });
+
+	        async function processNextLevel() {
+	            setAppState('processing');
+	            currentDepth++; // Increment before processing the new depth
+
+	            const nodesToProcess = [...nodesForNextLevel];
+	            nodesForNextLevel = [];
+	            
+	            updateStatus(`Starting depth ${currentDepth}/${maxDepth}. Processing ${nodesToProcess.length} articles...`);
+
+	            for (const sourceTitle of nodesToProcess) {
+                updateStatus(`Fetching links for "${sourceTitle}"...`);
+                const links = await fetchLinksFromAPI(sourceTitle);
+                
+                for (const targetTitle of links) {
+                    if (!processedTitles.has(targetTitle)) {
+                        processedTitles.add(targetTitle);
+                        nodesForNextLevel.push(targetTitle);
+                        addNode(targetTitle, currentDepth);
+                    }
+                    addEdge(sourceTitle, targetTitle);
+                }
+            }
+	            if (currentDepth >= maxDepth) {
+	                updateStatus(`Exploration complete. Reached maximum depth of ${maxDepth}.`);
+	                setAppState('finished');
+	            } else if (nodesForNextLevel.length === 0) {
+	                updateStatus(`Exploration complete. No new, unvisited articles found at depth ${currentDepth}.`);
+	                setAppState('finished');
+	            } else {
+	                updateStatus(`Finished depth ${currentDepth}. Found ${nodesForNextLevel.length} new articles to explore.`);
+	                setAppState('idle');
+	            }
+        }
+
+        async function fetchLinksFromAPI(pageTitle) {
+            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=links&format=json&origin=*`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Network error for "${pageTitle}"`);
+                
+                const data = await response.json();
+                if (data.error || !data.parse?.links) {
+                    console.warn(`Could not parse links for "${pageTitle}"`, data);
+                    return [];
+                }
+
+                return data.parse.links
+                    .filter(link => link.ns === 0 && !link['*'].includes(':')) // Filter main articles, exclude categories etc.
+                    .map(link => link['*'])
+                    .slice(0, 10); // IMPORTANT: Limit links per page to keep the graph manageable
+            } catch (error) {
+                console.error(`Failed to fetch links for "${pageTitle}":`, error);
+                updateStatus(`Error fetching links for ${pageTitle}. Check console for details.`, true);
+                return [];
+            }
+        }
+
+        function addNode(title, depth) {
+            if (nodes.get(title)) return;
+            nodes.add({ 
+                id: title, 
+                label: title,
+                color: DEPTH_COLORS[depth % DEPTH_COLORS.length],
+                size: depth === 0 ? 25 : 16,
+                level: depth
+            });
+        }
+
+        function addEdge(sourceTitle, targetTitle) {
+            const edgeId = `${sourceTitle}->${targetTitle}`;
+            if (edges.get(edgeId)) return;
+            edges.add({ id: edgeId, from: sourceTitle, to: targetTitle, arrows: { to: { enabled: true, scaleFactor: 0.5 } }, length: 200 });
+        }
+
+        function getTitleFromUrl(url) {
+            try {
+                const decodedUrl = decodeURIComponent(url);
+                if (!decodedUrl.includes('/wiki/')) return null;
+                return decodedUrl.substring(decodedUrl.lastIndexOf('/wiki/') + 6).replace(/_/g, ' ');
+            } catch (e) {
+                console.error("Invalid URL:", e);
+                return null;
+            }
+        }
+        
+	        function resetGraph() {
+	            currentDepth = 0;
+	            nodes.clear();
+	            edges.clear();
+	            processedTitles.clear();
+	            nodesForNextLevel = [];
+	            setAppState('idle');
+	        }
+
+        function setAppState(newState) {
+            appState = newState;
+            const isProcessing = newState === 'processing';
+            startBtn.disabled = isProcessing;
+            wikiLinkInput.disabled = isProcessing;
+            depthInput.disabled = isProcessing;
+	            // Show proceed button only if we are idle, have processed at least one level, 
+	            // have not reached max depth, and have nodes to process for the next level.
+	            proceedBtn.style.display = (newState === 'idle' && currentDepth > 0 && currentDepth < maxDepth && nodesForNextLevel.length > 0) ? 'inline-block' : 'none';
+            proceedBtn.disabled = isProcessing;
+        }
+
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'status-error' : '';
+        }
+    });
+    </script>
+</body>
+</html>
