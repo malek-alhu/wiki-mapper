@@ -12,98 +12,111 @@
         <aside class="sidebar">
             <h1>Wiki Mapper</h1>
 
-            <div class="mode-toggle">
-                <button id="modeExplore" class="active" type="button">Explore</button>
-                <button id="modePath" type="button">Find Path</button>
-            </div>
-
-            <form id="exploreForm" class="section">
-                <label for="wikiLink">Wikipedia URL</label>
-                <input type="url" id="wikiLink" required
-                    value="https://en.wikipedia.org/wiki/Data_science"
-                    placeholder="https://en.wikipedia.org/wiki/...">
-                <label for="depth">Depth</label>
-                <input type="number" id="depth" required min="1" max="5" value="2">
-                <div class="btn-row">
-                    <button type="submit" id="startBtn">Start</button>
-                    <button type="button" id="proceedBtn" class="success" style="display:none;">Next Level</button>
+            <div id="primaryControls">
+                <div class="mode-toggle">
+                    <button id="modeExplore" class="active" type="button">Explore</button>
+                    <button id="modePath" type="button">Find Path</button>
                 </div>
-            </form>
 
-            <form id="pathForm" class="section" style="display:none;">
-                <label for="pathA">From (URL or title)</label>
-                <input type="text" id="pathA" required
-                    value="https://en.wikipedia.org/wiki/Albert_Einstein">
-                <label for="pathB">To (URL or title)</label>
-                <input type="text" id="pathB" required
-                    value="https://en.wikipedia.org/wiki/Pizza">
-                <div class="btn-row">
-                    <button type="submit" id="pathBtn">Find Path</button>
-                    <button type="button" id="clearPathBtn" class="secondary">Clear Highlight</button>
-                </div>
-                <small class="hint">Auto-expands the graph until a path is found or the search runs out.</small>
-            </form>
-
-            <div class="section">
-                <h3>Search</h3>
-                <input type="text" id="searchInput" placeholder="Filter visible nodes...">
-                <small class="hint">Searches the full store, not just visible nodes.</small>
-            </div>
-
-            <div class="section">
-                <h3>Stats</h3>
-                <div class="stats">
-                    <div>Nodes <strong id="statNodes">0</strong></div>
-                    <div>Edges <strong id="statEdges">0</strong></div>
-                    <div>Hives <strong id="statHives">0</strong></div>
-                    <div>Cache <strong id="statCache">0/0</strong></div>
-                </div>
-            </div>
-
-            <div class="section">
-                <h3>Actions</h3>
-                <div class="btn-row">
-                    <button type="button" id="cancelBtn" class="danger" disabled>Cancel</button>
-                    <button type="button" id="resetBtn" class="secondary">Reset</button>
-                </div>
-            </div>
-
-            <details class="advanced">
-                <summary>Advanced</summary>
-                <div class="section">
-                    <h3>Filter (visible)</h3>
-                    <label>Depth range</label>
-                    <div style="display:flex;gap:6px;">
-                        <input type="number" id="minDepth" min="0" max="9" value="0" style="width:50%;">
-                        <input type="number" id="maxDepth" min="0" max="9" value="9" style="width:50%;">
-                    </div>
-                    <label for="minDegree">Min degree</label>
-                    <input type="number" id="minDegree" min="0" value="0">
+                <form id="exploreForm" class="section">
+                    <label for="wikiLink">Wikipedia URL</label>
+                    <input type="url" id="wikiLink" required
+                        value="https://en.wikipedia.org/wiki/Data_science"
+                        placeholder="Wikipedia URL">
+                    <label for="depth">Depth</label>
+                    <input type="number" id="depth" required min="1" max="5" value="2" placeholder="Depth">
                     <div class="btn-row">
-                        <button type="button" id="applyFiltersBtn" class="secondary">Apply</button>
+                        <button type="submit" id="startBtn">Start</button>
+                        <button type="button" id="proceedBtn" class="success" style="display:none;">Next Level</button>
+                    </div>
+                </form>
+
+                <form id="pathForm" class="section" style="display:none;">
+                    <label for="pathA">From</label>
+                    <input type="text" id="pathA" required
+                        value="https://en.wikipedia.org/wiki/Albert_Einstein"
+                        placeholder="From (URL or title)">
+                    <label for="pathB">To</label>
+                    <input type="text" id="pathB" required
+                        value="https://en.wikipedia.org/wiki/Pizza"
+                        placeholder="To (URL or title)">
+                    <div class="btn-row">
+                        <button type="submit" id="pathBtn">Find Path</button>
+                        <button type="button" id="clearPathBtn" class="secondary">Clear</button>
+                    </div>
+                    <small class="hint">Auto-expands the graph until a path is found.</small>
+                </form>
+            </div>
+
+            <div id="drawerControls">
+                <div class="drawer-handle" aria-hidden="true"></div>
+
+                <div class="section">
+                    <h3>Search</h3>
+                    <input type="text" id="searchInput" placeholder="Search the graph...">
+                    <small class="hint">Searches the full store, not just visible nodes.</small>
+                </div>
+
+                <div class="section">
+                    <h3>Stats</h3>
+                    <div class="stats">
+                        <div>Nodes <strong id="statNodes">0</strong></div>
+                        <div>Edges <strong id="statEdges">0</strong></div>
+                        <div>Hives <strong id="statHives">0</strong></div>
+                        <div>Cache <strong id="statCache">0/0</strong></div>
                     </div>
                 </div>
 
                 <div class="section">
-                    <h3>Performance</h3>
-                    <label for="concurrency">Parallel requests</label>
-                    <input type="number" id="concurrency" min="1" max="20" value="5">
-                    <label for="linksPerPage">Max links / page</label>
-                    <input type="number" id="linksPerPage" min="10" max="500" value="200">
-                    <label for="renderBudget">Render budget (nodes)</label>
-                    <input type="number" id="renderBudget" min="50" max="2000" value="200">
-                    <small class="hint">Excess nodes collapse into hexagonal "hive" clusters. Click a hive to expand.</small>
+                    <h3>Actions</h3>
+                    <div class="btn-row">
+                        <button type="button" id="cancelBtn" class="danger" disabled>Cancel</button>
+                        <button type="button" id="resetBtn" class="secondary">Reset</button>
+                    </div>
                 </div>
-            </details>
+
+                <details class="advanced">
+                    <summary>Advanced</summary>
+                    <div class="section">
+                        <h3>Filter (visible)</h3>
+                        <label>Depth range</label>
+                        <div style="display:flex;gap:6px;">
+                            <input type="number" id="minDepth" min="0" max="9" value="0" style="width:50%;" placeholder="min">
+                            <input type="number" id="maxDepth" min="0" max="9" value="9" style="width:50%;" placeholder="max">
+                        </div>
+                        <label for="minDegree">Min degree</label>
+                        <input type="number" id="minDegree" min="0" value="0" placeholder="Min degree">
+                        <div class="btn-row">
+                            <button type="button" id="applyFiltersBtn" class="secondary">Apply</button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>Performance</h3>
+                        <label for="concurrency">Parallel requests</label>
+                        <input type="number" id="concurrency" min="1" max="20" value="5" placeholder="Parallel requests">
+                        <label for="linksPerPage">Max links / page</label>
+                        <input type="number" id="linksPerPage" min="10" max="500" value="200" placeholder="Max links / page">
+                        <label for="renderBudget">Render budget (nodes)</label>
+                        <input type="number" id="renderBudget" min="50" max="2000" value="200" placeholder="Render budget">
+                        <small class="hint">Excess nodes collapse into hexagonal "hive" clusters. Click a hive to expand.</small>
+                    </div>
+                </details>
+            </div>
         </aside>
 
         <main class="main">
             <div id="graph-container"></div>
-            <div id="progressBar"><div id="progressFill"></div></div>
-            <div id="status">Ready.</div>
-            <small class="hint" style="margin-top:6px;">Click node = open Wikipedia · Double-click = recenter exploration · Click hive = expand</small>
+            <div id="statusWrap">
+                <div id="progressBar"><div id="progressFill"></div></div>
+                <div id="status">Ready.</div>
+            </div>
+            <small class="hint hint-help">Click node = open Wikipedia · Double-click = recenter · Click hive = expand</small>
         </main>
     </div>
+
+    <button id="fabBtn" type="button" aria-label="Open controls">&#9776;</button>
+    <div id="sheetOverlay" aria-hidden="true"></div>
 
     <script type="module" src="src/main.js"></script>
 </body>

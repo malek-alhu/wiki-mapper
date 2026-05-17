@@ -10,6 +10,7 @@
     --success: #28a745;
     --success-hover: #1e7e34;
     --danger: #d93025;
+    --toolbar-h: 0px;
 }
 
 * { box-sizing: border-box; }
@@ -19,6 +20,7 @@ body {
     background-color: var(--bg);
     margin: 0;
     color: var(--text);
+    overscroll-behavior: contain;
 }
 
 h1 {
@@ -52,6 +54,7 @@ h1 {
     display: flex;
     flex-direction: column;
     min-height: calc(100vh - 32px);
+    position: relative;
 }
 
 #graph-container {
@@ -149,13 +152,15 @@ button.danger:hover:not(:disabled) { background: #a02319; }
 }
 .stats strong { color: var(--primary); }
 
+#statusWrap {
+    margin-top: 8px;
+}
 #status {
     padding: 8px 12px;
     background: #f6f7f9;
     border-radius: 4px;
     font-size: 0.9rem;
     color: var(--muted);
-    margin-top: 8px;
     min-height: 36px;
 }
 #status.status-error {
@@ -169,7 +174,7 @@ button.danger:hover:not(:disabled) { background: #a02319; }
     background: #e9ecef;
     border-radius: 3px;
     overflow: hidden;
-    margin-top: 8px;
+    margin-bottom: 4px;
     display: none;
 }
 #progressFill {
@@ -185,6 +190,7 @@ small.hint {
     color: #888;
     margin-top: 4px;
 }
+.hint-help { margin-top: 6px; }
 
 details.advanced {
     margin-top: 12px;
@@ -219,23 +225,190 @@ details.advanced .section {
 }
 details.advanced .section:last-child { padding-bottom: 0; }
 
+.drawer-handle { display: none; }
+
+#fabBtn,
+#sheetOverlay {
+    display: none;
+}
+
 @media (max-width: 800px) {
-    .app {
-        display: flex;
-        flex-direction: column;
-        padding: 8px;
-        gap: 8px;
+    body {
+        overflow: hidden;
     }
-    .main {
-        order: -1;
-        min-height: 0;
-        height: 65vh;
-        padding: 8px;
+    .app {
+        display: block;
+        padding: 0;
+        max-width: none;
     }
     .sidebar {
-        max-height: 35vh;
-        padding: 12px;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        max-height: none;
+        overflow: visible;
+        border-radius: 0;
     }
-    #graph-container { min-height: 0; }
-    h1 { font-size: 1.2rem; margin: 0 0 8px; }
+    .sidebar > h1 { display: none; }
+
+    #primaryControls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        background: var(--panel);
+        padding: 8px 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    #primaryControls .mode-toggle {
+        margin-bottom: 6px;
+    }
+    #primaryControls .mode-toggle button {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+    #primaryControls form.section {
+        margin: 0;
+        padding: 0;
+        border: none;
+        display: flex;
+        gap: 6px;
+        align-items: stretch;
+        flex-wrap: nowrap;
+    }
+    #primaryControls form label { display: none; }
+    #primaryControls form small.hint { display: none; }
+    #primaryControls #exploreForm #wikiLink {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    #primaryControls #exploreForm #depth {
+        flex: 0 0 56px;
+        width: 56px;
+        text-align: center;
+    }
+    #primaryControls #exploreForm .btn-row {
+        margin: 0;
+        flex: 0 0 auto;
+    }
+    #primaryControls #exploreForm .btn-row button {
+        min-width: 60px;
+    }
+    #primaryControls #pathForm {
+        flex-wrap: wrap;
+    }
+    #primaryControls #pathForm input[type="text"] {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+    #primaryControls #pathForm .btn-row {
+        margin: 0;
+        flex: 1 1 100%;
+    }
+
+    .main {
+        margin-top: calc(var(--toolbar-h, 100px) + 4px);
+        height: calc(100vh - var(--toolbar-h, 100px) - 8px);
+        min-height: 0;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+    }
+    #graph-container {
+        flex: 1;
+        min-height: 0;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .main .hint-help { display: none; }
+
+    #statusWrap {
+        position: absolute;
+        top: 4px;
+        left: 8px;
+        right: 8px;
+        margin: 0;
+        pointer-events: none;
+        z-index: 5;
+    }
+    #status {
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(4px);
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        min-height: 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    #progressBar {
+        margin-bottom: 4px;
+    }
+
+    #drawerControls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-height: 78vh;
+        overflow-y: auto;
+        background: var(--panel);
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -6px 20px rgba(0,0,0,0.18);
+        transform: translateY(100%);
+        transition: transform 0.25s ease;
+        z-index: 40;
+        padding: 0 16px 24px;
+        -webkit-overflow-scrolling: touch;
+    }
+    #drawerControls.open { transform: translateY(0); }
+    #drawerControls .drawer-handle {
+        display: block;
+        width: 44px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin: 8px auto 12px;
+    }
+    #drawerControls .section { margin-bottom: 12px; }
+
+    #fabBtn {
+        display: flex;
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        font-size: 1.5rem;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        z-index: 35;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    }
+    body.sheet-open #fabBtn {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s;
+    }
+
+    #sheetOverlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+        z-index: 38;
+    }
+    #sheetOverlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
 }

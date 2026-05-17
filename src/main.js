@@ -40,6 +40,10 @@ const els = {
     statHives: $('statHives'),
     statCache: $('statCache'),
     container: $('graph-container'),
+    fabBtn: $('fabBtn'),
+    sheetOverlay: $('sheetOverlay'),
+    drawerControls: $('drawerControls'),
+    primaryControls: $('primaryControls'),
 };
 
 const state = {
@@ -97,9 +101,38 @@ function setMode(mode) {
     state.mode = mode;
     els.modeExplore.classList.toggle('active', mode === 'explore');
     els.modePath.classList.toggle('active', mode === 'path');
-    els.exploreForm.style.display = mode === 'explore' ? 'block' : 'none';
-    els.pathForm.style.display = mode === 'path' ? 'block' : 'none';
+    els.exploreForm.style.display = mode === 'explore' ? '' : 'none';
+    els.pathForm.style.display = mode === 'path' ? '' : 'none';
     if (mode === 'explore') state.view?.clearPathHighlight();
+    updateToolbarHeight();
+}
+
+function openSheet() {
+    els.drawerControls?.classList.add('open');
+    els.sheetOverlay?.classList.add('open');
+    document.body.classList.add('sheet-open');
+}
+
+function closeSheet() {
+    els.drawerControls?.classList.remove('open');
+    els.sheetOverlay?.classList.remove('open');
+    document.body.classList.remove('sheet-open');
+}
+
+function updateToolbarHeight() {
+    const tb = els.primaryControls;
+    if (!tb) return;
+    const h = tb.getBoundingClientRect().height;
+    if (h > 0) {
+        document.documentElement.style.setProperty('--toolbar-h', `${Math.ceil(h)}px`);
+    }
+}
+
+function fitGraph() {
+    if (!state.view?.network) return;
+    try {
+        state.view.network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+    } catch {}
 }
 
 function initView() {
@@ -192,6 +225,7 @@ async function processNextLevel() {
         setStatus(`Depth ${state.currentDepth} done. ${state.pendingNext.length} new articles ready for next level.`);
         setAppState('idle');
     }
+    setTimeout(fitGraph, 500);
 }
 
 async function recenterFrom(title) {
@@ -227,6 +261,7 @@ function wire() {
     els.exploreForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (state.appState === 'processing') return;
+        closeSheet();
         const parsed = parseWikiUrl(els.wikiLink.value);
         if (!parsed.ok) {
             setStatus(`Invalid Wikipedia URL (${parsed.reason}).`, true);
@@ -255,6 +290,7 @@ function wire() {
     els.pathForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (state.appState === 'processing') return;
+        closeSheet();
         const a = els.pathA.value;
         const b = els.pathB.value;
         const aParsed = parseWikiUrl(a);
@@ -314,6 +350,17 @@ function wire() {
     els.renderBudget.addEventListener('change', () => {
         if (state.view) state.view.renderBudget = parseInt(els.renderBudget.value, 10) || 200;
     });
+
+    els.fabBtn?.addEventListener('click', openSheet);
+    els.sheetOverlay?.addEventListener('click', closeSheet);
+
+    const onResize = debounce(() => {
+        updateToolbarHeight();
+        state.view?.network?.redraw();
+        if (state.store.size() > 1) fitGraph();
+    }, 150);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -323,5 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
     wire();
     setMode('explore');
     refreshStats();
+    updateToolbarHeight();
     setStatus('Ready. Paste a Wikipedia URL and click Start.');
 });
