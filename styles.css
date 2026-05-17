@@ -347,6 +347,10 @@ details.advanced .section:last-child { padding-bottom: 0; }
         padding: 6px 10px;
         min-height: 0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
     #progressBar {
         margin-bottom: 4px;
@@ -365,7 +369,7 @@ details.advanced .section:last-child { padding-bottom: 0; }
         transform: translateY(100%);
         transition: transform 0.25s ease;
         z-index: 40;
-        padding: 0 16px 24px;
+        padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px));
         -webkit-overflow-scrolling: touch;
     }
     #drawerControls.open { transform: translateY(0); }
@@ -382,8 +386,8 @@ details.advanced .section:last-child { padding-bottom: 0; }
     #fabBtn {
         display: flex;
         position: fixed;
-        bottom: 16px;
-        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        right: calc(16px + env(safe-area-inset-right, 0px));
         width: 56px;
         height: 56px;
         border-radius: 50%;

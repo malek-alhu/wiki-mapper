@@ -144,11 +144,30 @@ function initView() {
     });
 }
 
+let nodeBuffer = [];
+let edgeBuffer = [];
+let flushScheduled = false;
+function scheduleFlush() {
+    if (flushScheduled) return;
+    flushScheduled = true;
+    requestAnimationFrame(() => {
+        flushScheduled = false;
+        if (nodeBuffer.length) {
+            state.view.batchAddNodes(nodeBuffer);
+            nodeBuffer = [];
+        }
+        if (edgeBuffer.length) {
+            state.view.batchAddEdges(edgeBuffer);
+            edgeBuffer = [];
+        }
+    });
+}
+
 function initExplorer() {
     state.explorer = new Explorer({
         store: state.store,
         lang: state.lang,
-        maxLinksPerPage: parseInt(els.linksPerPage.value, 10) || 200,
+        maxLinksPerPage: parseInt(els.linksPerPage.value, 10) || 40,
         concurrency: parseInt(els.concurrency.value, 10) || 5,
         onPageDone: (title, count, fromCache) => {
             if (fromCache) state.cacheHits++;
@@ -156,8 +175,9 @@ function initExplorer() {
             refreshStats();
         },
         onLinkAdded: (from, to, isNew, childDepth) => {
-            if (isNew) state.view.addNode(to, childDepth);
-            state.view.addEdge(from, to);
+            if (isNew) nodeBuffer.push({ title: to, depth: childDepth });
+            edgeBuffer.push({ from, to });
+            scheduleFlush();
         },
         onProgress: ({ done, total, currentTitle }) => {
             setProgress(done, total);
@@ -208,7 +228,14 @@ async function processNextLevel() {
         }
     }
 
+    if (nodeBuffer.length || edgeBuffer.length) {
+        if (nodeBuffer.length) state.view.batchAddNodes(nodeBuffer);
+        if (edgeBuffer.length) state.view.batchAddEdges(edgeBuffer);
+        nodeBuffer = [];
+        edgeBuffer = [];
+    }
     state.view.enforceBudget(state.currentDepth);
+    state.view.settleLayout();
     refreshStats();
     setProgress(0, 0);
 
@@ -225,7 +252,6 @@ async function processNextLevel() {
         setStatus(`Depth ${state.currentDepth} done. ${state.pendingNext.length} new articles ready for next level.`);
         setAppState('idle');
     }
-    setTimeout(fitGraph, 500);
 }
 
 async function recenterFrom(title) {

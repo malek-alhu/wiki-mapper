@@ -1,6 +1,54 @@
 // MediaWiki API client + Wikipedia URL parsing.
+// Fetching is delegated to a Web Worker so JSON parsing + link filtering
+// don't block the main thread.
 
 const inflight = new Map();
+let worker = null;
+let nextWorkerId = 1;
+const workerCallbacks = new Map();
+
+function getWorker() {
+    if (worker) return worker;
+    try {
+        worker = new Worker(new URL('./fetch-worker.js', import.meta.url));
+        worker.onmessage = (e) => {
+            const { id, ok, links, error } = e.data;
+            const cb = workerCallbacks.get(id);
+            if (!cb) return;
+            workerCallbacks.delete(id);
+            if (ok) cb.resolve(links);
+            else cb.reject(new Error(error));
+        };
+        worker.onerror = (e) => {
+            console.warn('fetch-worker error:', e);
+        };
+    } catch (err) {
+        console.warn('fetch-worker unavailable, falling back to main-thread fetch:', err);
+        worker = null;
+    }
+    return worker;
+}
+
+function fetchLinksViaWorker({ lang, title, maxLinks, signal }) {
+    const w = getWorker();
+    if (!w) return null;
+    const id = nextWorkerId++;
+    return new Promise((resolve, reject) => {
+        const onAbort = () => {
+            workerCallbacks.delete(id);
+            reject(new DOMException('Aborted', 'AbortError'));
+        };
+        if (signal) {
+            if (signal.aborted) return onAbort();
+            signal.addEventListener('abort', onAbort, { once: true });
+        }
+        workerCallbacks.set(id, {
+            resolve: (v) => { signal?.removeEventListener('abort', onAbort); resolve(v); },
+            reject: (e) => { signal?.removeEventListener('abort', onAbort); reject(e); },
+        });
+        w.postMessage({ id, lang, title, maxLinks });
+    });
+}
 
 export function parseWikiUrl(rawUrl) {
     if (!rawUrl || typeof rawUrl !== 'string') {
@@ -40,6 +88,9 @@ export async function fetchLinks({ lang, title, signal, maxLinks = 500 }) {
     if (inflight.has(cacheKey)) return inflight.get(cacheKey);
 
     const promise = (async () => {
+        const viaWorker = fetchLinksViaWorker({ lang, title, maxLinks, signal });
+        if (viaWorker) return viaWorker;
+
         const collected = [];
         let plcontinue = null;
         while (collected.length < maxLinks) {

@@ -33,8 +33,12 @@ export class GraphView {
             interaction: { hover: true, tooltipDelay: 200, multiselect: false },
         });
 
+        this.isExploring = false;
         this.network.on('stabilizationIterationsDone', () => {
-            this.network.setOptions({ physics: { enabled: false } });
+            if (!this.isExploring) {
+                this.network.setOptions({ physics: { enabled: false } });
+                try { this.network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } }); } catch {}
+            }
         });
 
         this.network.on('click', params => this.handleClick(params));
@@ -68,8 +72,47 @@ export class GraphView {
     }
 
     kickPhysics() {
+        this.isExploring = true;
         this.network.setOptions({ physics: { enabled: true } });
-        this.network.stabilize(80);
+    }
+
+    settleLayout() {
+        this.isExploring = false;
+        this.network.setOptions({ physics: { enabled: true } });
+        this.network.stabilize(300);
+    }
+
+    batchAddNodes(items) {
+        const toAdd = [];
+        for (const { title, depth } of items) {
+            const key = normalizeTitle(title);
+            if (this.nodes.get(key)) continue;
+            toAdd.push({
+                id: key,
+                label: title,
+                title: title,
+                color: DEPTH_COLORS[depth % DEPTH_COLORS.length],
+                size: depth === 0 ? 26 : 16,
+                level: depth,
+            });
+        }
+        if (toAdd.length) this.nodes.add(toAdd);
+    }
+
+    batchAddEdges(items) {
+        const toAdd = [];
+        const seen = new Set();
+        for (const { from, to } of items) {
+            const fromKey = normalizeTitle(from);
+            const toKey = normalizeTitle(to);
+            const edgeId = `${fromKey}${toKey}`;
+            if (seen.has(edgeId)) continue;
+            seen.add(edgeId);
+            if (this.edges.get(edgeId)) continue;
+            if (!this.nodes.get(fromKey) || !this.nodes.get(toKey)) continue;
+            toAdd.push({ id: edgeId, from: fromKey, to: toKey });
+        }
+        if (toAdd.length) this.edges.add(toAdd);
     }
 
     addNode(title, depth) {
