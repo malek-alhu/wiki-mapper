@@ -1,0 +1,77 @@
+// Path-between two articles. Delegates BFS to a Web Worker.
+// Auto-fetches frontier articles when the path is not yet in the store.
+
+import { parseWikiUrl } from './api.js';
+import { normalizeTitle } from './store.js';
+
+export class PathFinder {
+    constructor({ store, explorer, getLang, onStatus, maxRounds = 4 }) {
+        this.store = store;
+        this.explorer = explorer;
+        this.getLang = getLang;
+        this.onStatus = onStatus;
+        this.maxRounds = maxRounds;
+        this.worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+        this.pending = new Map();
+        this.nextId = 1;
+        this.worker.onmessage = (e) => {
+            const { id, result, type } = e.data;
+            if (type !== 'path-result') return;
+            const cb = this.pending.get(id);
+            if (cb) {
+                this.pending.delete(id);
+                cb(result);
+            }
+        };
+    }
+
+    askWorker(a, b) {
+        const id = this.nextId++;
+        return new Promise(resolve => {
+            this.pending.set(id, resolve);
+            this.worker.postMessage({
+                type: 'path',
+                id,
+                a,
+                b,
+                snapshot: this.store.snapshot(),
+                maxHops: 6,
+            });
+        });
+    }
+
+    async find(aInput, bInput) {
+        const aParsed = parseWikiUrl(aInput);
+        const bParsed = parseWikiUrl(bInput);
+        const aTitle = aParsed.ok ? aParsed.title : aInput.trim();
+        const bTitle = bParsed.ok ? bParsed.title : bInput.trim();
+        if (!aTitle || !bTitle) return { ok: false, reason: 'bad-input' };
+
+        if (!this.store.has(aTitle)) {
+            this.store.addPage(aTitle, 0);
+            await this.explorer.exploreLevel([aTitle], 0);
+        }
+        if (!this.store.has(bTitle)) {
+            this.store.addPage(bTitle, 0);
+            await this.explorer.exploreLevel([bTitle], 0);
+        }
+
+        for (let round = 0; round < this.maxRounds; round++) {
+            this.onStatus?.(`Searching for a path (round ${round + 1}/${this.maxRounds})...`);
+            const result = await this.askWorker(aTitle, bTitle);
+            if (result.ok) return result;
+            if (result.reason !== 'not-found' || !result.need?.length) return result;
+            const toFetch = result.need.filter(t => {
+                const e = this.store.get(t);
+                return e && !e.fetched;
+            }).slice(0, 30);
+            if (toFetch.length === 0) return { ok: false, reason: 'exhausted' };
+            this.onStatus?.(`Expanding ${toFetch.length} frontier articles...`);
+            const depth = Math.max(
+                ...toFetch.map(t => this.store.get(t)?.depth ?? 0)
+            );
+            await this.explorer.exploreLevel(toFetch, depth);
+        }
+        return { ok: false, reason: 'max-rounds' };
+    }
+}

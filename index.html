@@ -3,218 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrected Wikipedia Graph Explorer</title>
-    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        h1 { color: #1c1e21; }
-        .container { max-width: 1200px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        form { margin-bottom: 20px; }
-        #graph-container { width: 100%; height: 75vh; border: 1px solid #ddd; border-radius: 8px; background-color: #ffffff; }
-        input, button { padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; margin: 5px; }
-        button { background-color: #007bff; color: white; cursor: pointer; border: none; transition: background-color 0.2s, opacity 0.2s; }
-        button:hover:not(:disabled) { background-color: #0056b3; }
-        button:disabled { background-color: #9dbde0; cursor: not-allowed; }
-        #proceedBtn { background-color: #28a745; }
-        #proceedBtn:hover:not(:disabled) { background-color: #1e7e34; }
-        #status { margin-top: 15px; font-size: 1.1em; color: #555; min-height: 25px; transition: color 0.3s; }
-        .status-error { color: #d93025; font-weight: bold; }
-    </style>
+    <title>Wikipedia Graph Explorer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Corrected Wikipedia Graph Explorer</h1>
-        <form id="wikiForm">
-            <input type="text" id="wikiLink" placeholder="Full Wikipedia Link" required size="50" value="https://en.wikipedia.org/wiki/Data_science">
-            <input type="number" id="depth" placeholder="Depth" required min="1" max="3" value="2">
-            <button type="submit" id="startBtn">Start Exploration</button>
-        </form>
+    <div class="app">
+        <aside class="sidebar">
+            <h1>Wiki Mapper</h1>
 
-        <div id="graph-container"></div>
-        <button id="proceedBtn" style="display:none;">Explore Next Level</button>
-        <div id="status"></div>
+            <div class="mode-toggle">
+                <button id="modeExplore" class="active" type="button">Explore</button>
+                <button id="modePath" type="button">Find Path</button>
+            </div>
+
+            <form id="exploreForm" class="section">
+                <label for="wikiLink">Wikipedia URL</label>
+                <input type="url" id="wikiLink" required
+                    value="https://en.wikipedia.org/wiki/Data_science"
+                    placeholder="https://en.wikipedia.org/wiki/...">
+                <label for="depth">Depth</label>
+                <input type="number" id="depth" required min="1" max="5" value="2">
+                <div class="btn-row">
+                    <button type="submit" id="startBtn">Start</button>
+                    <button type="button" id="proceedBtn" class="success" style="display:none;">Next Level</button>
+                </div>
+            </form>
+
+            <form id="pathForm" class="section" style="display:none;">
+                <label for="pathA">From (URL or title)</label>
+                <input type="text" id="pathA" required
+                    value="https://en.wikipedia.org/wiki/Albert_Einstein">
+                <label for="pathB">To (URL or title)</label>
+                <input type="text" id="pathB" required
+                    value="https://en.wikipedia.org/wiki/Pizza">
+                <div class="btn-row">
+                    <button type="submit" id="pathBtn">Find Path</button>
+                    <button type="button" id="clearPathBtn" class="secondary">Clear Highlight</button>
+                </div>
+                <small class="hint">Auto-expands the graph until a path is found or the search runs out.</small>
+            </form>
+
+            <div class="section">
+                <h3>Search</h3>
+                <input type="text" id="searchInput" placeholder="Filter visible nodes...">
+                <small class="hint">Searches the full store, not just visible nodes.</small>
+            </div>
+
+            <div class="section">
+                <h3>Filter (visible)</h3>
+                <label>Depth range</label>
+                <div style="display:flex;gap:6px;">
+                    <input type="number" id="minDepth" min="0" max="9" value="0" style="width:50%;">
+                    <input type="number" id="maxDepth" min="0" max="9" value="9" style="width:50%;">
+                </div>
+                <label for="minDegree">Min degree</label>
+                <input type="number" id="minDegree" min="0" value="0">
+                <div class="btn-row">
+                    <button type="button" id="applyFiltersBtn" class="secondary">Apply</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Performance</h3>
+                <label for="concurrency">Parallel requests</label>
+                <input type="number" id="concurrency" min="1" max="20" value="5">
+                <label for="linksPerPage">Max links / page</label>
+                <input type="number" id="linksPerPage" min="10" max="500" value="200">
+                <label for="renderBudget">Render budget (nodes)</label>
+                <input type="number" id="renderBudget" min="50" max="2000" value="200">
+                <small class="hint">Excess nodes collapse into hexagonal "hive" clusters. Click a hive to expand.</small>
+            </div>
+
+            <div class="section">
+                <h3>Stats</h3>
+                <div class="stats">
+                    <div>Nodes <strong id="statNodes">0</strong></div>
+                    <div>Edges <strong id="statEdges">0</strong></div>
+                    <div>Hives <strong id="statHives">0</strong></div>
+                    <div>Cache <strong id="statCache">0/0</strong></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Actions</h3>
+                <div class="btn-row">
+                    <button type="button" id="cancelBtn" class="danger" disabled>Cancel</button>
+                    <button type="button" id="resetBtn" class="secondary">Reset</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div id="graph-container"></div>
+            <div id="progressBar"><div id="progressFill"></div></div>
+            <div id="status">Ready.</div>
+            <small class="hint" style="margin-top:6px;">Click node = open Wikipedia · Double-click = recenter exploration · Click hive = expand</small>
+        </main>
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('wikiForm');
-        const startBtn = document.getElementById('startBtn');
-        const proceedBtn = document.getElementById('proceedBtn');
-        const statusDiv = document.getElementById('status');
-        const wikiLinkInput = document.getElementById('wikiLink');
-        const depthInput = document.getElementById('depth');
-
-        let network;
-        const nodes = new vis.DataSet();
-        const edges = new vis.DataSet();
-        
-        let maxDepth = 0;
-        let currentDepth = 0;
-        let nodesForNextLevel = [];
-        const processedTitles = new Set();
-        let appState = 'idle'; // 'idle', 'processing', 'finished'
-
-        const DEPTH_COLORS = ['#ff6347', '#1e90ff', '#32cd32', '#ffaf40', '#9d4edd'];
-
-        const container = document.getElementById('graph-container');
-        const data = { nodes, edges };
-        const options = {
-            nodes: { shape: 'dot', size: 16, font: { size: 12, color: '#333' } },
-            edges: { width: 0.5, color: { inherit: 'from' }, smooth: { type: 'continuous' } },
-            physics: {
-                enabled: true,
-                barnesHut: {
-                    gravitationalConstant: -8000,
-                    springConstant: 0.04,
-                    springLength: 150,
-                    damping: 0.09
-                },
-                solver: 'barnesHut',
-                stabilization: { iterations: 200 }
-            },
-            interaction: { hover: true, tooltipDelay: 200 }
-        };
-	        network = new vis.Network(container, data, options);
-
-	        form.addEventListener('submit', (e) => {
-	            e.preventDefault();
-	            if (appState === 'processing') return;
-	            
-	            resetGraph();
-	            
-	            const initialUrl = wikiLinkInput.value;
-	            maxDepth = parseInt(depthInput.value, 10);
-	            const pageTitle = getTitleFromUrl(initialUrl);
-
-	            if (!pageTitle) {
-	                updateStatus("Invalid Wikipedia URL. Please check and try again.", true);
-	                return;
-	            }
-	            
-	            addNode(pageTitle, 0);
-	            processedTitles.add(pageTitle);
-	            nodesForNextLevel = [pageTitle];
-	            currentDepth = 0; // Initialize currentDepth
-	            
-	            processNextLevel();
-	        });
-
-	        proceedBtn.addEventListener('click', () => {
-	            if (appState === 'processing' || currentDepth >= maxDepth) return;
-	            processNextLevel();
-	        });
-
-	        async function processNextLevel() {
-	            setAppState('processing');
-	            currentDepth++; // Increment before processing the new depth
-
-	            const nodesToProcess = [...nodesForNextLevel];
-	            nodesForNextLevel = [];
-	            
-	            updateStatus(`Starting depth ${currentDepth}/${maxDepth}. Processing ${nodesToProcess.length} articles...`);
-
-	            for (const sourceTitle of nodesToProcess) {
-                updateStatus(`Fetching links for "${sourceTitle}"...`);
-                const links = await fetchLinksFromAPI(sourceTitle);
-                
-                for (const targetTitle of links) {
-                    if (!processedTitles.has(targetTitle)) {
-                        processedTitles.add(targetTitle);
-                        nodesForNextLevel.push(targetTitle);
-                        addNode(targetTitle, currentDepth);
-                    }
-                    addEdge(sourceTitle, targetTitle);
-                }
-            }
-	            if (currentDepth >= maxDepth) {
-	                updateStatus(`Exploration complete. Reached maximum depth of ${maxDepth}.`);
-	                setAppState('finished');
-	            } else if (nodesForNextLevel.length === 0) {
-	                updateStatus(`Exploration complete. No new, unvisited articles found at depth ${currentDepth}.`);
-	                setAppState('finished');
-	            } else {
-	                updateStatus(`Finished depth ${currentDepth}. Found ${nodesForNextLevel.length} new articles to explore.`);
-	                setAppState('idle');
-	            }
-        }
-
-        async function fetchLinksFromAPI(pageTitle) {
-            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=links&format=json&origin=*`;
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Network error for "${pageTitle}"`);
-                
-                const data = await response.json();
-                if (data.error || !data.parse?.links) {
-                    console.warn(`Could not parse links for "${pageTitle}"`, data);
-                    return [];
-                }
-
-                return data.parse.links
-                    .filter(link => link.ns === 0 && !link['*'].includes(':')) // Filter main articles, exclude categories etc.
-                    .map(link => link['*'])
-                    .slice(0, 10); // IMPORTANT: Limit links per page to keep the graph manageable
-            } catch (error) {
-                console.error(`Failed to fetch links for "${pageTitle}":`, error);
-                updateStatus(`Error fetching links for ${pageTitle}. Check console for details.`, true);
-                return [];
-            }
-        }
-
-        function addNode(title, depth) {
-            if (nodes.get(title)) return;
-            nodes.add({ 
-                id: title, 
-                label: title,
-                color: DEPTH_COLORS[depth % DEPTH_COLORS.length],
-                size: depth === 0 ? 25 : 16,
-                level: depth
-            });
-        }
-
-        function addEdge(sourceTitle, targetTitle) {
-            const edgeId = `${sourceTitle}->${targetTitle}`;
-            if (edges.get(edgeId)) return;
-            edges.add({ id: edgeId, from: sourceTitle, to: targetTitle, arrows: { to: { enabled: true, scaleFactor: 0.5 } }, length: 200 });
-        }
-
-        function getTitleFromUrl(url) {
-            try {
-                const decodedUrl = decodeURIComponent(url);
-                if (!decodedUrl.includes('/wiki/')) return null;
-                return decodedUrl.substring(decodedUrl.lastIndexOf('/wiki/') + 6).replace(/_/g, ' ');
-            } catch (e) {
-                console.error("Invalid URL:", e);
-                return null;
-            }
-        }
-        
-	        function resetGraph() {
-	            currentDepth = 0;
-	            nodes.clear();
-	            edges.clear();
-	            processedTitles.clear();
-	            nodesForNextLevel = [];
-	            setAppState('idle');
-	        }
-
-        function setAppState(newState) {
-            appState = newState;
-            const isProcessing = newState === 'processing';
-            startBtn.disabled = isProcessing;
-            wikiLinkInput.disabled = isProcessing;
-            depthInput.disabled = isProcessing;
-	            // Show proceed button only if we are idle, have processed at least one level, 
-	            // have not reached max depth, and have nodes to process for the next level.
-	            proceedBtn.style.display = (newState === 'idle' && currentDepth > 0 && currentDepth < maxDepth && nodesForNextLevel.length > 0) ? 'inline-block' : 'none';
-            proceedBtn.disabled = isProcessing;
-        }
-
-        function updateStatus(message, isError = false) {
-            statusDiv.textContent = message;
-            statusDiv.className = isError ? 'status-error' : '';
-        }
-    });
-    </script>
+    <script type="module" src="src/main.js"></script>
 </body>
 </html>

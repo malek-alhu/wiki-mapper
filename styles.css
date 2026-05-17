@@ -1,0 +1,199 @@
+:root {
+    --bg: #f0f2f5;
+    --panel: #ffffff;
+    --border: #ddd;
+    --text: #1c1e21;
+    --muted: #555;
+    --primary: #007bff;
+    --primary-hover: #0056b3;
+    --primary-disabled: #9dbde0;
+    --success: #28a745;
+    --success-hover: #1e7e34;
+    --danger: #d93025;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    margin: 0;
+    color: var(--text);
+}
+
+h1 {
+    margin: 0 0 12px;
+    font-size: 1.4rem;
+}
+
+.app {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    padding: 16px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.sidebar {
+    background: var(--panel);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 16px;
+    overflow-y: auto;
+    max-height: calc(100vh - 32px);
+}
+
+.main {
+    background: var(--panel);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 32px);
+}
+
+#graph-container {
+    flex: 1;
+    width: 100%;
+    min-height: 60vh;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+}
+
+.section {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+.section:last-child { border-bottom: none; }
+.section h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin: 0 0 8px;
+}
+
+.mode-toggle {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+.mode-toggle button {
+    flex: 1;
+    background: #eee;
+    color: #333;
+    border: 1px solid var(--border);
+}
+.mode-toggle button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 6px 0 2px;
+}
+
+input[type="text"], input[type="url"], input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+button {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.15s, opacity 0.15s;
+}
+button:hover:not(:disabled) { background: var(--primary-hover); }
+button:disabled { background: var(--primary-disabled); cursor: not-allowed; }
+button.success { background: var(--success); }
+button.success:hover:not(:disabled) { background: var(--success-hover); }
+button.secondary { background: #6c757d; }
+button.secondary:hover:not(:disabled) { background: #565d63; }
+button.danger { background: var(--danger); }
+button.danger:hover:not(:disabled) { background: #a02319; }
+
+.btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+.btn-row button { flex: 1; min-width: 80px; }
+
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 0.85rem;
+}
+.stats div {
+    background: #f6f7f9;
+    padding: 6px 8px;
+    border-radius: 4px;
+}
+.stats strong { color: var(--primary); }
+
+#status {
+    padding: 8px 12px;
+    background: #f6f7f9;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-top: 8px;
+    min-height: 36px;
+}
+#status.status-error {
+    background: #fde7e5;
+    color: var(--danger);
+}
+
+#progressBar {
+    width: 100%;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+    display: none;
+}
+#progressFill {
+    height: 100%;
+    background: var(--primary);
+    width: 0;
+    transition: width 0.2s;
+}
+
+small.hint {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 4px;
+}
+
+@media (max-width: 800px) {
+    .app {
+        grid-template-columns: 1fr;
+        padding: 8px;
+        gap: 8px;
+    }
+    .sidebar {
+        max-height: none;
+    }
+    #graph-container { min-height: 50vh; }
+}
