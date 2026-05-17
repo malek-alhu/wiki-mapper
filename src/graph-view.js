@@ -27,8 +27,8 @@ export class GraphView {
             physics: {
                 enabled: true,
                 solver: 'barnesHut',
-                barnesHut: { gravitationalConstant: -8000, springConstant: 0.04, springLength: 150, damping: 0.4 },
-                stabilization: { iterations: 150 },
+                barnesHut: { gravitationalConstant: -10000, springConstant: 0.04, springLength: 160, damping: 0.15 },
+                stabilization: { iterations: 400, updateInterval: 25 },
             },
             interaction: { hover: true, tooltipDelay: 200, multiselect: false },
         });
@@ -120,17 +120,21 @@ export class GraphView {
 
     clusterDepth(depth) {
         const color = DEPTH_COLORS[depth % DEPTH_COLORS.length];
+        const ids = new Set();
+        this.nodes.forEach(n => { if (n.level === depth) ids.add(n.id); });
+        if (ids.size < 2) return;
+        const count = ids.size;
         this.network.cluster({
-            joinCondition: nodeOpts => nodeOpts.level === depth,
-            processProperties: (clusterOpts, childNodes) => {
-                clusterOpts.label = `+${childNodes.length} @ d${depth}`;
-                clusterOpts.shape = 'hexagon';
-                clusterOpts.color = color;
-                clusterOpts.size = Math.min(60, 16 + Math.sqrt(childNodes.length) * 4);
-                clusterOpts.font = { size: 14, color: '#fff' };
-                return clusterOpts;
+            joinCondition: nodeOpts => ids.has(nodeOpts.id),
+            clusterNodeProperties: {
+                id: `hive-d${depth}`,
+                label: `+${count} @ d${depth}`,
+                shape: 'hexagon',
+                color: color,
+                size: Math.min(60, 18 + Math.sqrt(count) * 4),
+                font: { size: 14, color: '#fff' },
+                borderWidth: 2,
             },
-            clusterNodeProperties: { id: `hive-d${depth}`, allowSingleNodeCluster: false },
         });
     }
 

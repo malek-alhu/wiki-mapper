@@ -285,17 +285,22 @@ details.advanced .section:last-child { padding-bottom: 0; }
         min-width: 0;
     }
     #primaryControls #exploreForm #depth {
-        flex: 0 0 56px;
-        width: 56px;
+        flex: 0 0 48px;
+        width: 48px;
         text-align: center;
+        padding: 8px 4px;
     }
     #primaryControls #exploreForm .btn-row {
         margin: 0;
         flex: 0 0 auto;
+        flex-wrap: nowrap;
     }
     #primaryControls #exploreForm .btn-row button {
-        min-width: 60px;
+        min-width: 56px;
+        white-space: nowrap;
+        padding: 8px 10px;
     }
+    #primaryControls button { white-space: nowrap; }
     #primaryControls #pathForm {
         flex-wrap: wrap;
     }

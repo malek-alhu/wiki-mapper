@@ -27,7 +27,7 @@
                     <input type="number" id="depth" required min="1" max="5" value="2" placeholder="Depth">
                     <div class="btn-row">
                         <button type="submit" id="startBtn">Start</button>
-                        <button type="button" id="proceedBtn" class="success" style="display:none;">Next Level</button>
+                        <button type="button" id="proceedBtn" class="success" style="display:none;">Next</button>
                     </div>
                 </form>
 
@@ -96,7 +96,7 @@
                         <label for="concurrency">Parallel requests</label>
                         <input type="number" id="concurrency" min="1" max="20" value="5" placeholder="Parallel requests">
                         <label for="linksPerPage">Max links / page</label>
-                        <input type="number" id="linksPerPage" min="10" max="500" value="200" placeholder="Max links / page">
+                        <input type="number" id="linksPerPage" min="10" max="500" value="40" placeholder="Max links / page">
                         <label for="renderBudget">Render budget (nodes)</label>
                         <input type="number" id="renderBudget" min="50" max="2000" value="200" placeholder="Render budget">
                         <small class="hint">Excess nodes collapse into hexagonal "hive" clusters. Click a hive to expand.</small>
