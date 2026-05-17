@@ -186,14 +186,56 @@ small.hint {
     margin-top: 4px;
 }
 
+details.advanced {
+    margin-top: 12px;
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+}
+details.advanced > summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    padding: 4px 0;
+    list-style: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+details.advanced > summary::-webkit-details-marker { display: none; }
+details.advanced > summary::before {
+    content: "▸";
+    font-size: 0.8rem;
+    transition: transform 0.15s;
+    display: inline-block;
+}
+details.advanced[open] > summary::before { transform: rotate(90deg); }
+details.advanced .section {
+    margin-top: 12px;
+    margin-bottom: 0;
+    padding-bottom: 12px;
+}
+details.advanced .section:last-child { padding-bottom: 0; }
+
 @media (max-width: 800px) {
     .app {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         padding: 8px;
         gap: 8px;
     }
-    .sidebar {
-        max-height: none;
+    .main {
+        order: -1;
+        min-height: 0;
+        height: 65vh;
+        padding: 8px;
     }
-    #graph-container { min-height: 50vh; }
+    .sidebar {
+        max-height: 35vh;
+        padding: 12px;
+    }
+    #graph-container { min-height: 0; }
+    h1 { font-size: 1.2rem; margin: 0 0 8px; }
 }

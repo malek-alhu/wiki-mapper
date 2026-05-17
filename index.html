@@ -51,31 +51,6 @@
             </div>
 
             <div class="section">
-                <h3>Filter (visible)</h3>
-                <label>Depth range</label>
-                <div style="display:flex;gap:6px;">
-                    <input type="number" id="minDepth" min="0" max="9" value="0" style="width:50%;">
-                    <input type="number" id="maxDepth" min="0" max="9" value="9" style="width:50%;">
-                </div>
-                <label for="minDegree">Min degree</label>
-                <input type="number" id="minDegree" min="0" value="0">
-                <div class="btn-row">
-                    <button type="button" id="applyFiltersBtn" class="secondary">Apply</button>
-                </div>
-            </div>
-
-            <div class="section">
-                <h3>Performance</h3>
-                <label for="concurrency">Parallel requests</label>
-                <input type="number" id="concurrency" min="1" max="20" value="5">
-                <label for="linksPerPage">Max links / page</label>
-                <input type="number" id="linksPerPage" min="10" max="500" value="200">
-                <label for="renderBudget">Render budget (nodes)</label>
-                <input type="number" id="renderBudget" min="50" max="2000" value="200">
-                <small class="hint">Excess nodes collapse into hexagonal "hive" clusters. Click a hive to expand.</small>
-            </div>
-
-            <div class="section">
                 <h3>Stats</h3>
                 <div class="stats">
                     <div>Nodes <strong id="statNodes">0</strong></div>
@@ -92,6 +67,34 @@
                     <button type="button" id="resetBtn" class="secondary">Reset</button>
                 </div>
             </div>
+
+            <details class="advanced">
+                <summary>Advanced</summary>
+                <div class="section">
+                    <h3>Filter (visible)</h3>
+                    <label>Depth range</label>
+                    <div style="display:flex;gap:6px;">
+                        <input type="number" id="minDepth" min="0" max="9" value="0" style="width:50%;">
+                        <input type="number" id="maxDepth" min="0" max="9" value="9" style="width:50%;">
+                    </div>
+                    <label for="minDegree">Min degree</label>
+                    <input type="number" id="minDegree" min="0" value="0">
+                    <div class="btn-row">
+                        <button type="button" id="applyFiltersBtn" class="secondary">Apply</button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Performance</h3>
+                    <label for="concurrency">Parallel requests</label>
+                    <input type="number" id="concurrency" min="1" max="20" value="5">
+                    <label for="linksPerPage">Max links / page</label>
+                    <input type="number" id="linksPerPage" min="10" max="500" value="200">
+                    <label for="renderBudget">Render budget (nodes)</label>
+                    <input type="number" id="renderBudget" min="50" max="2000" value="200">
+                    <small class="hint">Excess nodes collapse into hexagonal "hive" clusters. Click a hive to expand.</small>
+                </div>
+            </details>
         </aside>
 
         <main class="main">
