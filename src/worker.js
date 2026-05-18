@@ -15,12 +15,14 @@ function bfsPath(snapshot, aKey, bKey, maxHops = 6) {
     let frontierA = [aKey];
     let frontierB = [bKey];
     let hops = 0;
+    const need = new Set();
 
     const expand = (frontier, visited, other) => {
         const next = [];
         for (const key of frontier) {
             const entry = snapshot[key];
             if (!entry) continue;
+            if (!entry.fetched) { need.add(key); continue; }
             for (const out of entry.outLinks) {
                 if (visited.has(out)) continue;
                 visited.set(out, key);
@@ -43,12 +45,11 @@ function bfsPath(snapshot, aKey, bKey, maxHops = 6) {
         hops++;
     }
 
-    const frontier = new Set([...frontierA, ...frontierB]);
-    const need = [...frontier]
+    const needTitles = [...need]
         .map(k => snapshot[k]?.title)
         .filter(Boolean)
-        .slice(0, 20);
-    return { ok: false, reason: 'not-found', need };
+        .slice(0, 30);
+    return { ok: false, reason: 'not-found', need: needTitles };
 }
 
 function reconstruct(meet, visitedA, visitedB, snapshot) {

@@ -107,6 +107,7 @@ export class GraphStore {
                 title: entry.title,
                 depth: entry.depth,
                 outLinks: [...entry.outLinks],
+                fetched: entry.fetched,
             };
         }
         return out;

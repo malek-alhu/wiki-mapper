@@ -43,7 +43,6 @@ const els = {
     fabBtn: $('fabBtn'),
     sheetOverlay: $('sheetOverlay'),
     drawerControls: $('drawerControls'),
-    primaryControls: $('primaryControls'),
 };
 
 const state = {
@@ -104,7 +103,6 @@ function setMode(mode) {
     els.exploreForm.style.display = mode === 'explore' ? '' : 'none';
     els.pathForm.style.display = mode === 'path' ? '' : 'none';
     if (mode === 'explore') state.view?.clearPathHighlight();
-    updateToolbarHeight();
 }
 
 function openSheet() {
@@ -117,15 +115,6 @@ function closeSheet() {
     els.drawerControls?.classList.remove('open');
     els.sheetOverlay?.classList.remove('open');
     document.body.classList.remove('sheet-open');
-}
-
-function updateToolbarHeight() {
-    const tb = els.primaryControls;
-    if (!tb) return;
-    const h = tb.getBoundingClientRect().height;
-    if (h > 0) {
-        document.documentElement.style.setProperty('--toolbar-h', `${Math.ceil(h)}px`);
-    }
 }
 
 function fitGraph() {
@@ -320,9 +309,15 @@ function wire() {
         const a = els.pathA.value;
         const b = els.pathB.value;
         const aParsed = parseWikiUrl(a);
-        if (aParsed.ok) {
-            state.lang = aParsed.lang;
-            state.view.setLang(aParsed.lang);
+        const bParsed = parseWikiUrl(b);
+        const newLang = (aParsed.ok && aParsed.lang)
+            || (bParsed.ok && bParsed.lang)
+            || state.lang;
+        if (newLang !== state.lang) {
+            state.lang = newLang;
+            state.view.setLang(newLang);
+            initExplorer();
+            initPathFinder();
         }
         setAppState('processing');
         setStatus('Looking for path...');
@@ -381,7 +376,6 @@ function wire() {
     els.sheetOverlay?.addEventListener('click', closeSheet);
 
     const onResize = debounce(() => {
-        updateToolbarHeight();
         state.view?.network?.redraw();
         if (state.store.size() > 1) fitGraph();
     }, 150);
@@ -396,6 +390,5 @@ document.addEventListener('DOMContentLoaded', () => {
     wire();
     setMode('explore');
     refreshStats();
-    updateToolbarHeight();
     setStatus('Ready. Paste a Wikipedia URL and click Start.');
 });
