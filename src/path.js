@@ -1,16 +1,15 @@
-// Path-between two articles. Delegates BFS to a Web Worker.
-// Auto-fetches frontier articles when the path is not yet in the store.
+// Path-between two articles. Delegates BFS to a Web Worker (so the UI
+// stays responsive) and keeps fetching frontier articles until the
+// shortest path is found or the reachable subgraph is exhausted.
 
 import { parseWikiUrl } from './api.js';
-import { normalizeTitle } from './store.js';
 
 export class PathFinder {
-    constructor({ store, explorer, getLang, onStatus, maxRounds = 4 }) {
+    constructor({ store, explorer, getLang, onStatus }) {
         this.store = store;
         this.explorer = explorer;
         this.getLang = getLang;
         this.onStatus = onStatus;
-        this.maxRounds = maxRounds;
         this.worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
         this.pending = new Map();
         this.nextId = 1;
@@ -35,7 +34,6 @@ export class PathFinder {
                 a,
                 b,
                 snapshot: this.store.snapshot(),
-                maxHops: 6,
             });
         });
     }
@@ -56,15 +54,19 @@ export class PathFinder {
             await this.explorer.exploreLevel([bTitle], 0);
         }
 
-        for (let round = 0; round < this.maxRounds; round++) {
-            this.onStatus?.(`Searching for a path (round ${round + 1}/${this.maxRounds})...`);
+        let round = 0;
+        while (true) {
+            round++;
+            this.onStatus?.(`Searching for shortest path (round ${round})...`);
+            // Yield so the UI can paint between rounds.
+            await new Promise(r => setTimeout(r, 0));
             const result = await this.askWorker(aTitle, bTitle);
             if (result.ok) return result;
             if (result.reason !== 'not-found' || !result.need?.length) return result;
             const toFetch = result.need.filter(t => {
                 const e = this.store.get(t);
                 return e && !e.fetched;
-            }).slice(0, 30);
+            });
             if (toFetch.length === 0) return { ok: false, reason: 'exhausted' };
             this.onStatus?.(`Expanding ${toFetch.length} frontier articles...`);
             const depth = Math.max(
@@ -72,6 +74,5 @@ export class PathFinder {
             );
             await this.explorer.exploreLevel(toFetch, depth);
         }
-        return { ok: false, reason: 'max-rounds' };
     }
 }
