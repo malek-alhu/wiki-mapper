@@ -58,6 +58,8 @@ const state = {
     appState: 'idle', // 'idle' | 'processing' | 'finished'
     cacheHits: 0,
     cacheMisses: 0,
+    pathSearchActive: false,
+    fetchFailures: 0,
 };
 
 function setStatus(msg, isError = false) {
@@ -158,12 +160,18 @@ function initExplorer() {
         lang: state.lang,
         maxLinksPerPage: parseInt(els.linksPerPage.value, 10) || 40,
         concurrency: parseInt(els.concurrency.value, 10) || 5,
-        onPageDone: (title, count, fromCache) => {
+        onPageDone: (title, count, fromCache, failed) => {
+            if (failed) state.fetchFailures++;
             if (fromCache) state.cacheHits++;
             else state.cacheMisses++;
             refreshStats();
         },
         onLinkAdded: (from, to, isNew, childDepth) => {
+            // While a Find Path search is in flight, frontier articles
+            // are an internal detail of BFS -- skipping the render keeps
+            // the canvas (and physics solver) idle so the UI stays
+            // responsive. The store is still updated upstream.
+            if (state.pathSearchActive) return;
             if (isNew) nodeBuffer.push({ title: to, depth: childDepth });
             edgeBuffer.push({ from, to });
             scheduleFlush();
@@ -321,7 +329,21 @@ function wire() {
         }
         setAppState('processing');
         setStatus('Looking for path...');
-        const result = await state.pathFinder.find(a, b);
+
+        // Collapse the current graph into hives and freeze physics so
+        // the canvas stays still while BFS + fetch rounds run.
+        const failuresBefore = state.fetchFailures;
+        state.view.enforceBudget(Math.max(state.currentDepth, 5));
+        state.view.network.setOptions({ physics: { enabled: false } });
+        state.pathSearchActive = true;
+
+        let result;
+        try {
+            result = await state.pathFinder.find(a, b);
+        } finally {
+            state.pathSearchActive = false;
+        }
+
         if (result.ok) {
             setStatus(`Path found: ${result.path.length - 1} hops.`);
             for (const t of result.path) {
@@ -336,7 +358,18 @@ function wire() {
             state.view.kickPhysics();
             setTimeout(() => state.view.highlightPath(path), 400);
         } else {
-            setStatus(`No path found (${result.reason}).`, true);
+            const newFailures = state.fetchFailures - failuresBefore;
+            let msg;
+            if (result.reason === 'fetch-blocked' || (newFailures > 0 && result.reason === 'not-found')) {
+                msg = `Wikipedia API blocked (${newFailures} failed fetches). Check network / CORS.`;
+            } else if (result.reason === 'exhausted') {
+                msg = 'No path found (graph exhausted).';
+            } else if (result.reason === 'bad-input') {
+                msg = 'No path found (bad input).';
+            } else {
+                msg = `No path found (${result.reason}).`;
+            }
+            setStatus(msg, true);
         }
         refreshStats();
         setAppState('idle');

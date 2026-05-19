@@ -13,6 +13,8 @@ export class PathFinder {
         this.worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
         this.pending = new Map();
         this.nextId = 1;
+        this.snapshotVersion = -1;
+        this.snapshotCache = null;
         this.worker.onmessage = (e) => {
             const { id, result, type } = e.data;
             if (type !== 'path-result') return;
@@ -24,6 +26,15 @@ export class PathFinder {
         };
     }
 
+    snapshot() {
+        if (this.snapshotVersion === this.store.version && this.snapshotCache) {
+            return this.snapshotCache;
+        }
+        this.snapshotCache = this.store.snapshot();
+        this.snapshotVersion = this.store.version;
+        return this.snapshotCache;
+    }
+
     askWorker(a, b) {
         const id = this.nextId++;
         return new Promise(resolve => {
@@ -33,7 +44,7 @@ export class PathFinder {
                 id,
                 a,
                 b,
-                snapshot: this.store.snapshot(),
+                snapshot: this.snapshot(),
             });
         });
     }
@@ -73,6 +84,17 @@ export class PathFinder {
                 ...toFetch.map(t => this.store.get(t)?.depth ?? 0)
             );
             await this.explorer.exploreLevel(toFetch, depth);
+            // If every fetched article in this round came back with zero
+            // outlinks, we're not making progress -- almost certainly a
+            // network/CORS block. Bail with a distinct reason instead of
+            // spinning forever.
+            const gainedAnyLinks = toFetch.some(t => {
+                const e = this.store.get(t);
+                return e && e.outLinks.size > 0;
+            });
+            if (!gainedAnyLinks) {
+                return { ok: false, reason: 'fetch-blocked' };
+            }
         }
     }
 }

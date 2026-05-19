@@ -54,6 +54,7 @@ export class Explorer {
     async fetchOne(title, currentDepth) {
         let links = await this.store.loadCachedLinks(this.lang, title);
         let fromCache = true;
+        let failed = false;
         if (!links) {
             fromCache = false;
             try {
@@ -66,7 +67,7 @@ export class Explorer {
                 await this.store.saveCachedLinks(this.lang, title, links);
             } catch (err) {
                 if (err?.name === 'AbortError') throw err;
-                console.warn(`Fetch failed for "${title}":`, err);
+                failed = true;
                 links = [];
             }
         }
@@ -77,7 +78,7 @@ export class Explorer {
             this.store.addLink(title, target);
             this.onLinkAdded?.(title, target, isNew, currentDepth + 1);
         }
-        this.onPageDone?.(title, links.length, fromCache);
+        this.onPageDone?.(title, links.length, fromCache, failed);
         return links.length;
     }
 

@@ -55,17 +55,23 @@ async function idbPut(value) {
 export class GraphStore {
     constructor() {
         this.pages = new Map(); // normTitle -> { title, depth, outLinks: Set, inLinks: Set, fetched }
+        // Bumped on any real mutation so snapshot callers can cheaply detect change.
+        this.version = 0;
     }
 
     addPage(title, depth) {
         const key = normalizeTitle(title);
         const existing = this.pages.get(key);
         if (existing) {
-            if (depth < existing.depth) existing.depth = depth;
+            if (depth < existing.depth) {
+                existing.depth = depth;
+                this.version++;
+            }
             return existing;
         }
         const entry = { title, depth, outLinks: new Set(), inLinks: new Set(), fetched: false };
         this.pages.set(key, entry);
+        this.version++;
         return entry;
     }
 
@@ -79,7 +85,10 @@ export class GraphStore {
 
     markFetched(title) {
         const entry = this.get(title);
-        if (entry) entry.fetched = true;
+        if (entry && !entry.fetched) {
+            entry.fetched = true;
+            this.version++;
+        }
     }
 
     addLink(fromTitle, toTitle) {
@@ -88,8 +97,10 @@ export class GraphStore {
         const from = this.pages.get(fromKey);
         const to = this.pages.get(toKey);
         if (!from || !to) return;
+        const before = from.outLinks.size;
         from.outLinks.add(toKey);
         to.inLinks.add(fromKey);
+        if (from.outLinks.size !== before) this.version++;
     }
 
     titles() {

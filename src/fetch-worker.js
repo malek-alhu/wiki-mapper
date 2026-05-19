@@ -15,7 +15,9 @@ async function fetchPageLinks({ lang, title, maxLinks }) {
         });
         if (plcontinue) params.set('plcontinue', plcontinue);
         const url = `https://${lang}.wikipedia.org/w/api.php?${params}`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            headers: { 'Api-User-Agent': 'WikiMapper/1.0 (https://wiki-mapper.netlify.app/)' },
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const pages = data?.query?.pages;
